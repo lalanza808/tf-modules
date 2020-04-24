@@ -16,7 +16,15 @@ module "guardduty" {
 
 ## Limitations
 
+### Lack of Parallelism
+
 Due to the way Terraform interfaces with Cloudformation Stack Set instances the module cannot apply resources in parallel - the stack set is busy. So the only limitation with this module is that you must run Terraform with the `-parellism=1` flag set.
+
+### Deletion
+
+If you want to remove the module in it's entirety, you can't use `terraform destroy` because of the way Cloudformation Stack Sets works - it needs a certain IAM role to orchestrate the removal of the Stack Set instances and a destroy operation will delete that role, preventing the removal of the remainder of resources.
+
+Instead, set the `regions` to an empty list: `[]`
 
 
 ## Inputs
