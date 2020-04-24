@@ -22,7 +22,7 @@ variable "regions" {
 
 variable "tags" {
   default     = {}
-  type        = "map"
+  type        = map
   description = "Optional tag mapping to apply to the infrastructure"
 }
 
