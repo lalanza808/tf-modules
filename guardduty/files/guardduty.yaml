@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Simple CFT for enabling Guard Duty
+Resources:
+  GuardDutyDetector:
+    Type: AWS::GuardDuty::Detector
+    Properties:
+      Enable: true
+      FindingPublishingFrequency: SIX_HOURS
