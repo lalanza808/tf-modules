@@ -8,7 +8,7 @@ https://aws.amazon.com/guardduty/
 
 ```
 module "guardduty-notifications" {
-  source = "github.com/lalanza808/tf-modules.git/security/guardduty-notifications"
+  source = "github.com/lalanza808/tf-modules.git/monitoring/guardduty-notifications"
 }
 ```
 
