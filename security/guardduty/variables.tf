@@ -1,6 +1,6 @@
 variable "regions" {
   description = "Which regions to deploy Guard Duty into"
-  type        = "list"
+  type        = list
   default = [
     "ap-south-1",
     "eu-west-3",
@@ -27,6 +27,6 @@ variable "tags" {
 }
 
 variable "prefix" {
-  default     = ""
+  default     = "security"
   description = "String to prefix to all resources"
 }

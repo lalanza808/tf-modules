@@ -1,7 +1,5 @@
 data "aws_caller_identity" "current" {}
 
-data "aws_region" "current" {}
-
 data "local_file" "guardduty_cft" {
   filename = "${path.module}/files/guardduty.yaml"
 }
