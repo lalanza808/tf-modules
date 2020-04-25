@@ -22,7 +22,6 @@ resource "aws_cloudwatch_log_group" "guardduty" {
 }
 
 resource "aws_cloudwatch_event_target" "guardduty-sns" {
-  count     = length(var.sns_topic_arn) > 0 ? 1 : 0
   rule      = aws_cloudwatch_event_rule.guardduty.name
   target_id = "send_to_sns"
   arn       = var.sns_topic_arn
