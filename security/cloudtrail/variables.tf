@@ -60,6 +60,6 @@ variable "activity_log_buckets" {
   default     = []
 }
 variable "default_log_bucket" {
-  default = "arn:aws:s3:::"
+  default     = "arn:aws:s3:::"
   description = "The default buckets to log - all buckets in the account - override to empty string"
 }

@@ -1,6 +1,6 @@
 resource "aws_iam_role" "cloudtrail_log_group_role" {
-  name  = aws_s3_bucket.cloudtrail_bucket.id
-  tags  = var.tags
+  name = aws_s3_bucket.cloudtrail_bucket.id
+  tags = var.tags
 
   assume_role_policy = <<EOF
 {
@@ -19,8 +19,8 @@ EOF
 }
 
 resource "aws_iam_role_policy" "cloudtrail_log_group_role_policy" {
-  name  = aws_s3_bucket.cloudtrail_bucket.id
-  role  = aws_iam_role.cloudtrail_log_group_role.id
+  name = aws_s3_bucket.cloudtrail_bucket.id
+  role = aws_iam_role.cloudtrail_log_group_role.id
 
   policy = <<EOF
 {

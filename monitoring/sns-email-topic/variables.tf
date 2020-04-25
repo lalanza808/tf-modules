@@ -1,5 +1,5 @@
 variable "sns_emails" {
-  type = list
+  type    = list
   default = []
 }
 variable "tags" {

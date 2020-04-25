@@ -8,7 +8,7 @@ variable "app_name" {
 }
 variable "administrator_roles" {
   description = "IAM Role name of AWS account administrators"
-  type = list
+  type        = list
 }
 variable "tags" {
   default     = {}

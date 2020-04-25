@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "kms" {
     ]
     resources = ["*"]
     principals {
-      type = "AWS"
+      type        = "AWS"
       identifiers = formatlist("arn:aws:iam::${local.account_id}:role/%s", var.usage_roles)
     }
   }
@@ -62,7 +62,7 @@ data "aws_iam_policy_document" "kms" {
     ]
     resources = ["*"]
     principals {
-      type = "AWS"
+      type        = "AWS"
       identifiers = formatlist("arn:aws:iam::${local.account_id}:role/%s", var.usage_roles)
     }
     condition {

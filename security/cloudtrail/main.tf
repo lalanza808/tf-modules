@@ -17,7 +17,7 @@ resource "aws_cloudtrail" "cloudtrail_bucket_logging" {
     include_management_events = var.include_management_events
 
     data_resource {
-      type   = "AWS::S3::Object"
+      type = "AWS::S3::Object"
       values = compact(concat(
         [var.default_log_bucket],
         formatlist("arn:aws:s3:::%s/", var.activity_log_buckets)

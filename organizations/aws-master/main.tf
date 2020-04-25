@@ -17,7 +17,7 @@ resource "aws_organizations_organizational_unit" "non_prod" {
 }
 
 resource "aws_organizations_policy" "prod" {
-  name  = "Production"
+  name = "Production"
 
   content = <<CONTENT
 {
@@ -32,7 +32,7 @@ CONTENT
 }
 
 resource "aws_organizations_policy" "non_prod" {
-  name  = "NonProduction"
+  name = "NonProduction"
 
   content = <<CONTENT
 {
