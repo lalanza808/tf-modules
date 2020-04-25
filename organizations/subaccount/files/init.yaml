@@ -1,0 +1,82 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: This stack creates the required resources for cross account management.
+
+Parameters:
+  Prefix:
+    Type: String
+    Description: "The string to prefix in front of created resources"
+    Default: "organizations"
+  Account:
+    Type: String
+    Description: "The name of the account - dev, test, stage, prod, mgmt, etc"
+
+Resources:
+  # IAM
+  ManagementRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ManagementRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS:
+            - arn:aws:iam::${AWS::AccountId}:role/OrganizationAccountAccessRole
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AdministratorAccess
+
+  # Terraform Backend
+  TerraformStateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      BucketName: !Sub ${Prefix}-${Account}-terraform-state
+      VersioningConfiguration:
+        Status: Enabled
+  TerraformStateBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref TerraformStateBucket
+      PolicyDocument:
+        Statement:
+        - Action: s3:*
+          Effect: Allow
+          Principal:
+            AWS: arn:aws:iam::000000000000:role/RemoteAccess
+          Resource:
+            - !GetAtt TerraformStateBucket.Arn
+            - !Join
+              - '/'
+              - - !GetAtt TerraformStateBucket.Arn
+                - '*'
+  TerraformStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: LockID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: LockID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: !Sub ${Prefix}-${Account}-terraform-locks
+
+Outputs:
+  TerraformStateBucketOutput:
+    Description: Bucket used to store Terraform remote state file
+    Value: !Ref TerraformStateBucket
+  TerraformStateTableOutput:
+    Description: DynamoDB table used for Terraform state locking functionality
+    Value: !Ref TerraformStateTable
+  ManagementRoleArn:
+    Value: !GetAtt ManagementRole.Arn
