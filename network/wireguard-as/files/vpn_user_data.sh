@@ -19,6 +19,7 @@ aws s3api head-object --bucket ${CONFIG_BUCKET} --key wg0.conf
 if [[ "$?" -eq 0 ]]; then
   echo "[+] Copying existing WireGuard config to system from s3://${CONFIG_BUCKET}"
   aws s3 cp s3://${CONFIG_BUCKET}/wg0.conf /etc/wireguard/wg0.conf
+  aws s3 cp s3://${CONFIG_BUCKET}/pubkey /opt/pubkey
 else
   echo "[+] Generating new WireGuard config"
   wg genkey | tee /opt/privkey | wg pubkey > /opt/pubkey
@@ -32,6 +33,7 @@ PrivateKey = $(cat /opt/privkey)
 SaveConfig = true
 EOF
   aws s3 cp /etc/wireguard/wg0.conf s3://${CONFIG_BUCKET}/wg0.conf
+  aws s3 cp /opt/pubkey s3://${CONFIG_BUCKET}/pubkey
 fi
 
 
