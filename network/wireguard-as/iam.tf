@@ -42,10 +42,12 @@ data "aws_iam_policy_document" "vpn" {
   statement {
     actions = [
       "s3:Put*",
-      "s3:Get*"
+      "s3:Get*",
+      "s3:List*"
     ]
     resources = [
-      "${aws_s3_bucket.configs.arn}/*"
+      "${aws_s3_bucket.configs.arn}/*",
+      aws_s3_bucket.configs.arn
     ]
   }
 }

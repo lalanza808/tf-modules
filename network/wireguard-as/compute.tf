@@ -21,10 +21,13 @@ module "vpn_asg" {
 
   user_data = templatefile("${path.module}/files/vpn_user_data.sh", {
     EIP_ID = aws_eip.vpn.id
+    ENDPOINT = aws_eip.vpn.public_ip
     REGION = data.aws_region.current.name
     CONFIG_BUCKET = aws_s3_bucket.configs.id
     WIREGUARD_INTERFACE = var.wireguard_interface
     WIREGUARD_PORT = var.wireguard_vpn_port
+    CLIENT_ROUTE = var.client_route
+    AUTO_UPGRADE = var.auto_upgrade
   })
 
   tags_as_map = {

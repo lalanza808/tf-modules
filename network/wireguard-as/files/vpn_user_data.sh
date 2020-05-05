@@ -2,88 +2,115 @@
 
 set -x
 
-# Elastic IP attachment
-INSTANCE_ID=$(curl -s 169.254.169.254/latest/meta-data/instance-id)
-aws ec2 associate-address --allocation-id ${EIP_ID} --instance-id $INSTANCE_ID --region ${REGION}
 
 
-# Install WireGuard and other dependencies
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:wireguard/wireguard
-apt-get update
-apt-get install -y "linux-headers-$(uname -r)"
-apt-get install -y wireguard iptables resolvconf awscli git sudo
+# Set variables
+export INSTANCE_ID=$(curl -s 169.254.169.254/latest/meta-data/instance-id)
+export INSTANCE_PRIVATE_IP=$(curl -s 169.254.169.254/latest/meta-data/local-ipv4)
+export PRIMARY_NETWORK_INT=$(netstat -i | grep -v "Iface\|Kern\|lo" | awk '{print $1}')
+export APP_REPO=https://github.com/lalanza808/wgas
+export APP_USER=wgas
+export APP_SVC=wgas
+export APP_HOME=/opt/wgas
+export SYSTEMD_PATH=/lib/systemd/system/wgas.service
+export WG_HOME=/etc/wireguard
+export WGAS_ENDPOINT=${ENDPOINT}
+export WGAS_SUDO=true
+export WGAS_DNS=$INSTANCE_PRIVATE_IP
+export WGAS_ROUTE=${CLIENT_ROUTE}
+export WGAS_PORT=${WIREGUARD_PORT}
 
-# Initialization WireGuard configs
-aws s3api head-object --bucket ${CONFIG_BUCKET} --key wg0.conf
-if [[ "$?" -eq 0 ]]; then
-  echo "[+] Copying existing WireGuard config to system from s3://${CONFIG_BUCKET}"
-  aws s3 cp s3://${CONFIG_BUCKET}/wg0.conf /etc/wireguard/wg0.conf
-  aws s3 cp s3://${CONFIG_BUCKET}/pubkey /opt/pubkey
-else
-  echo "[+] Generating new WireGuard config"
-  wg genkey | tee /opt/privkey | wg pubkey > /opt/pubkey
-  cat << EOF > /etc/wireguard/wg0.conf
-[Interface]
-Address = ${WIREGUARD_INTERFACE}
-ListenPort = ${WIREGUARD_PORT}
-PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;
-PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;
-PrivateKey = $(cat /opt/privkey)
-SaveConfig = true
-EOF
-  aws s3 cp /etc/wireguard/wg0.conf s3://${CONFIG_BUCKET}/wg0.conf
-  aws s3 cp /opt/pubkey s3://${CONFIG_BUCKET}/pubkey
+
+# Update package meta
+apt-get update > /var/log/init-apt-update.log
+
+
+# Auto upgrade OS if specified
+if [[ ${AUTO_UPGRADE} == "true" ]]; then
+  apt-get upgrade -y > /var/log/init-apt-upgrade.log
 fi
 
 
-# Install Rust and app as a systemd service
-sudo apt install build-essential -y
+# Install base packages
+apt-get install -y awscli git sudo gettext build-essential software-properties-common > /var/log/init-base-packages.log
 
+
+# Install WireGuard
+add-apt-repository -y ppa:wireguard/wireguard
+apt-get update >> /var/log/init-apt-update.log
+apt-get install -y linux-headers-$(uname -r) wireguard iptables resolvconf > /var/log/init-wireguard-packages.log
+
+
+# Setup traffic forwarding and routing
+iptables -A FORWARD -i wg0 -j ACCEPT
+iptables -t nat -A POSTROUTING -o $PRIMARY_NETWORK_INT -j MASQUERADE
+mkdir -p /etc/iptables
+iptables-save > /etc/iptables/rules.v4
+sysctl -w net.ipv4.ip_forward=1
+
+
+# Initialize WireGuard configs
+aws s3api head-object --bucket ${CONFIG_BUCKET} --key wg0.conf
+if [[ "$?" -eq 0 ]]; then
+  echo "[+] Copying existing WireGuard configs and keys to system from s3://${CONFIG_BUCKET}"
+  aws s3 sync s3://${CONFIG_BUCKET}/ $WG_HOME/
+else
+  echo "[+] Generating new WireGuard config"
+  wg genkey | tee $WG_HOME/privkey | wg pubkey > $WG_HOME/pubkey
+  cat << EOF > $WG_HOME/wg0.conf
+[Interface]
+Address = ${WIREGUARD_INTERFACE}
+ListenPort = ${WIREGUARD_PORT}
+PrivateKey = $(cat $WG_HOME/privkey)
+SaveConfig = true
+EOF
+  aws s3 sync $WG_HOME/ s3://${CONFIG_BUCKET}/
+fi
+
+
+# Enable and start wg-quick service
+systemctl enable wg-quick@wg0
+systemctl start wg-quick@wg0
+
+
+# Export new environment variable
+export WGAS_PUBKEY=$(cat $WG_HOME/pubkey)
+
+
+# Create new app user and clone the project
+useradd $APP_USER -s /sbin/nologin -M
+mkdir -p $APP_HOME
+git clone $APP_REPO $APP_HOME
+chown -R ubuntu:ubuntu $APP_HOME
+
+
+# Install Rust and build application
 cat << EOF > /opt/install_app.sh
 #!/bin/bash
+HOME=/home/ubuntu
+PATH=$PATH:~/.cargo/bin
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | RUSTUP_HOME=~/.rustup sh -s -- -y
-source ~/.cargo/env
-git clone https://github.com/lalanza808/wgas-rs ~/wgas-rs
-cd ~/wgas-rs
-rustup override set nightly
-cargo build --release
+cd $APP_HOME
+echo "[+] Installing nightly Rust"
+rustup override set nightly > ~/rustup-nightly.log
+echo "[+] Building new release binary"
+cargo build --release > ~/cargo-build.log
 EOF
 chmod +x /opt/install_app.sh
-sudo -u ubuntu /opt/install_app.sh
-useradd wgas-rs -s /sbin/nologin -M
-cat << EOF > /lib/systemd/system/wgas-rs.service
-[Unit]
-Description=WireGuard Access Server Service
-ConditionPathExists=/home/ubuntu/wgas-rs/target/release/wgas-rs
-After=network.target
+sudo -u ubuntu -E /opt/install_app.sh
 
-[Service]
-Type=simple
-User=wgas-rs
-Group=wgas-rs
-LimitNOFILE=1024
 
-Restart=on-failure
-RestartSec=10
-startLimitIntervalSec=60
+# Add app user to sudoers file
+echo "$APP_USER ALL=(ALL) NOPASSWD: $(which wg), $(which wg-quick)" >> /etc/sudoers
 
-WorkingDirectory=/home/ubuntu/wgas-rs
-ExecStart=/home/ubuntu/wgas-rs/target/release/wgas-rs
 
-# make sure log directory exists and owned by syslog
-PermissionsStartOnly=true
-ExecStartPre=/bin/mkdir -p /var/log/wgas-rs
-ExecStartPre=/bin/chown syslog:adm /var/log/wgas-rs
-ExecStartPre=/bin/chmod 755 /var/log/wgas-rs
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=wgas-rs
-
-[Install]
-WantedBy=multi-user.target
-EOF
-chmod 755 /lib/systemd/system/wgas-rs.service
+# Setup systemd service
+cat $APP_HOME/util/wgas.service | envsubst > $SYSTEMD_PATH
+chmod 755 $SYSTEMD_PATH
 systemctl daemon-reload
-systemctl enable wgas-rs
-systemctl start wgas-rs
+systemctl enable $APP_SVC
+systemctl start $APP_SVC
+
+
+# Elastic IP attachment
+aws ec2 associate-address --allocation-id ${EIP_ID} --instance-id $INSTANCE_ID --region ${REGION}

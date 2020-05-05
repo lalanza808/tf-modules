@@ -45,3 +45,18 @@ variable "wireguard_interface" {
   default = "10.66.66.1/24"
   description = "VPN tunnel interface IP and CIDR"
 }
+
+variable "client_route" {
+  default = "0.0.0.0/0"
+  description = "VPN tunnel route for clients to tunnel traffic through - default all client traffic is forwarded to VPN"
+}
+
+variable "auto_upgrade" {
+  default = true
+  description = "Whether or not to automatically update packages during cloud-init"
+}
+
+variable "force_destroy_bucket" {
+  default = true
+  description = "Whether or not to force destruction of the bucket"
+}

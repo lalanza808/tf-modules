@@ -1,6 +1,7 @@
 resource "aws_s3_bucket" "configs" {
   bucket_prefix = "${var.prefix}-config-"
   acl           = "private"
+  force_destroy = var.force_destroy_bucket
 }
 
 data "aws_iam_policy_document" "config_policy" {
