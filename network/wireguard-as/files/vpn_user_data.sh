@@ -19,6 +19,7 @@ export WGAS_SUDO=true
 export WGAS_DNS=$INSTANCE_PRIVATE_IP
 export WGAS_ROUTE=${CLIENT_ROUTE}
 export WGAS_PORT=${WIREGUARD_PORT}
+export WGAS_NETWORK=${WIREGUARD_NETWORK}
 
 
 # Update package meta
@@ -59,8 +60,8 @@ else
   wg genkey | tee $WG_HOME/privkey | wg pubkey > $WG_HOME/pubkey
   cat << EOF > $WG_HOME/wg0.conf
 [Interface]
-Address = ${WIREGUARD_INTERFACE}
-ListenPort = ${WIREGUARD_PORT}
+Address = $WGAS_NETWORK
+ListenPort = $WGAS_PORT
 PrivateKey = $(cat $WG_HOME/privkey)
 SaveConfig = true
 EOF

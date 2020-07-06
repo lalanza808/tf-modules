@@ -24,7 +24,7 @@ module "vpn_asg" {
     ENDPOINT = aws_eip.vpn.public_ip
     REGION = data.aws_region.current.name
     CONFIG_BUCKET = aws_s3_bucket.configs.id
-    WIREGUARD_INTERFACE = var.wireguard_interface
+    WIREGUARD_NETWORK = var.wireguard_network
     WIREGUARD_PORT = var.wireguard_vpn_port
     CLIENT_ROUTE = var.client_route
     AUTO_UPGRADE = var.auto_upgrade

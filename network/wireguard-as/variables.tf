@@ -41,7 +41,7 @@ variable "public_subnets" {
   description = "List of subnets for deploying WireGuard VPN servers into"
 }
 
-variable "wireguard_interface" {
+variable "wireguard_network" {
   default = "10.66.66.1/24"
   description = "VPN tunnel interface IP and CIDR"
 }
