@@ -6,6 +6,11 @@ locals {
   metric_namespace = "CISBenchmarks"
   metric_value     = "1"
 
+  whitelist_iam_role_string = join(" && ", compact(concat(
+    [],
+    formatlist("$.userIdentity.sessionContext.sessionIssuer.userName != \"%s\"", var.whitelist_iam_roles)
+  )))
+
   metric_name = [
     "CIS-3.1-AuthorizationFailureCount",
     "CIS-3.8-S3BucketActivityEventCount",
@@ -27,7 +32,7 @@ locals {
   ]
 
   filter_pattern = [
-    "{ ($.errorCode = \"*UnauthorizedOperation\") || ($.errorCode = \"AccessDenied*\") }",
+    "{ ($.errorCode = \"*UnauthorizedOperation\" || $.errorCode = \"AccessDenied*\") && ${local.whitelist_iam_role_string}}",
     "{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }",
     "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }",
     "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }",

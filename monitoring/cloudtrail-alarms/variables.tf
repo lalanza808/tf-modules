@@ -17,3 +17,13 @@ variable "account_name" {
 variable "login_failures" {
   default = 3
 }
+variable "whitelist_iam_roles" {
+  default = [
+    "MissionCloudHealth",
+    "MissionCloudAware",
+    "security-guardduty-ss-exec",
+    "security-guardduty-ss-admin",
+    "config-recorder-role"
+  ]
+  description = "IAM role names that should not be alerted upon in CIS Benchmark alarms"
+}
